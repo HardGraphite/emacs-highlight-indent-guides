@@ -948,19 +948,9 @@ This runs whenever a theme is loaded, but it can also be run interactively."
         (set-face-background sevenf (color-lighten-name bk (* mod sevenp)))
         (set-face-foreground scharf (color-lighten-name bk (* mod scharp)))))))
 
-(defadvice load-theme (after highlight-indent-guides-auto-set-faces disable)
-  "Automatically calculate indent guide faces.
-If this feature is enabled, calculate reasonable values for the indent guide
-colors based on the current theme's colorscheme, and set them appropriately.
-This runs whenever a theme is loaded."
-  (highlight-indent-guides-auto-set-faces))
-
-(defadvice disable-theme (after highlight-indent-guides-auto-set-faces disable)
-  "Automatically calculate indent guide faces.
-If this feature is enabled, calculate reasonable values for the indent guide
-colors based on the current theme's colorscheme, and set them appropriately.
-This runs whenever a theme is disabled."
-  (highlight-indent-guides-auto-set-faces))
+(defun highlight-indent-guides--on-enable-theme (theme)
+  (when (eq theme 'user)
+    (highlight-indent-guides-auto-set-faces)))
 
 (defun highlight-indent-guides--auto-set-faces-with-frame (frame)
   "Run `highlight-indent-guides-auto-set-faces' in frame FRAME.
@@ -999,12 +989,8 @@ This function is designed to run from the `after-make-frame-functions' hook."
           (unless (daemonp) (highlight-indent-guides-auto-set-faces))
           (add-to-list 'after-make-frame-functions
                        'highlight-indent-guides--auto-set-faces-with-frame)
-          (ad-enable-advice 'load-theme 'after
-                            'highlight-indent-guides-auto-set-faces)
-          (ad-activate 'load-theme)
-          (ad-enable-advice 'disable-theme 'after
-                            'highlight-indent-guides-auto-set-faces)
-          (ad-activate 'disable-theme)
+          (add-to-list 'enable-theme-functions
+                       'highlight-indent-guides--on-enable-theme)
           (add-to-list 'font-lock-extra-managed-props 'display)
           (add-to-list 'text-property-default-nonsticky
                        (cons 'highlight-indent-guides-prop t))
@@ -1024,12 +1010,9 @@ This function is designed to run from the `after-make-frame-functions' hook."
       (setq after-make-frame-functions
             (delete 'highlight-indent-guides--auto-set-faces-with-frame
                     after-make-frame-functions))
-      (ad-disable-advice 'load-theme 'after
-                         'highlight-indent-guides-auto-set-faces)
-      (ad-activate 'load-theme)
-      (ad-disable-advice 'disable-theme 'after
-                         'highlight-indent-guides-auto-set-faces)
-      (ad-activate 'disable-theme)
+      (setq enable-theme-functions
+            (delete 'highlight-indent-guides--on-enable-theme
+                    enable-theme-functions))
       (font-lock-remove-keywords nil fill-method-keywords)
       (font-lock-remove-keywords nil column-method-keywords)
       (font-lock-remove-keywords nil character-method-keywords)
